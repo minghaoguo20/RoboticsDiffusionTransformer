@@ -19,7 +19,8 @@ dataset:
   # read by the consumer with new data
 
   # The path to the buffer (at least 400GB)
-  buf_path: /path/to/buffer
+  # buf_path: /home/panwen.hu/workspace/jian.zhang/EAI/buffer
+  buf_path: /home/panwen.hu/workspace/minghao.guo/warehouse/rdt/buffer
   # The number of chunks in the buffer
   buf_num_chunks: 512
   # The number of samples (step rather than episode) in each chunk

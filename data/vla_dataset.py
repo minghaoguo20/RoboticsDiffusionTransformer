@@ -14,15 +14,15 @@ from data.preprocess_scripts import *
 # Producer does not need GPU
 tf.config.set_visible_devices([], 'GPU')
 
-OPENX_EMBOD_DIR = 'data/datasets/openx_embod'
+OPENX_EMBOD_DIR = None # 'data/datasets/openx_embod'
 
 DATASET_NAMES_NOOPENX = [
-    "aloha_mobile",
-    "aloha_static",
-    "roboset",
-    "agilex",
-    "rh20t",
-    'calvin',
+    # "aloha_mobile",
+    # "aloha_static",
+    # "roboset",
+    # "agilex",
+    # "rh20t",
+    # 'calvin',
     "bridgev2"
 ]
 

@@ -55,12 +55,15 @@ def write_tfrecords(root_dir, out_dir):
     num_files = 0
     for root, dirs, files in os.walk(root_dir):
         num_files += len(fnmatch.filter(files, '*.hdf5'))
+    if num_files == 0:
+        print("No .hdf5 files found. Exiting.")
     with tqdm(total=num_files) as pbar:
         for root, dirs, files in os.walk(root_dir):
             for filename in fnmatch.filter(files, '*.hdf5'):
                 filepath = os.path.join(root, filename)
                 with h5py.File(filepath, 'r') as f:
-                    if not 'instruction' in f:
+                    if 'instruction' not in f:
+                        print(f"Skipping {filepath} as 'steps/language_instruction' is missing.")
                         continue
                     pbar.update(1)
                     output_dir = os.path.join(out_dir, os.path.relpath(root, root_dir))

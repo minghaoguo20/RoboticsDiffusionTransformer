@@ -182,3 +182,11 @@ wandb/
 # Distributed leaning
 hostfile.txt
 .deepspeed_env
+dataset_debug.py
+dataset_debug.sh
+temp
+tmp
+pretrain-deepspeed.sh
+todo.md
+data/aloha/download.py
+data/aloha/seehdf5.py

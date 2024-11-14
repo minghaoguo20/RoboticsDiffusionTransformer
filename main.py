@@ -1,9 +1,14 @@
+# from debug_util import setup_debugger
+# setup_debugger(ip_addr="127.0.0.1", port=9501, debug=True)
+
 import argparse
 import os
 from train.train import train
 
 from accelerate.logging import get_logger
 
+import wandb
+wandb.init(mode="disabled")
 
 def parse_args(input_args=None):
     parser = argparse.ArgumentParser(description="Main script for training RDT.")
