@@ -94,7 +94,8 @@ class VLAConsumerDataset(Dataset):
         cam_ext_mask_prob=-1.0,
         state_noise_snr=None,
         use_hdf5=False,
-        use_precomp_lang_embed=False
+        use_precomp_lang_embed=False,
+        max_files=None,
     ):
         super(VLAConsumerDataset, self).__init__()
         
@@ -114,7 +115,7 @@ class VLAConsumerDataset(Dataset):
         
         self.buffer_dir = config["buf_path"]
         self.num_chunks = config["buf_num_chunks"]
-        self.chunk_size = config["buf_chunk_size"]
+        self.chunk_size = config["buf_chunk_size"]        
         self.tokenizer_max_length = config["tokenizer_max_length"]
         self.image_aspect_ratio = config["image_aspect_ratio"]
         self.state_noise_snr = state_noise_snr
@@ -125,7 +126,7 @@ class VLAConsumerDataset(Dataset):
         self.use_hdf5 = use_hdf5
         self.hdf5_dataset = None
         if use_hdf5:
-            self.hdf5_dataset = HDF5VLADataset()
+            self.hdf5_dataset = HDF5VLADataset(max_files=max_files)
         self.use_precomp_lang_embed = use_precomp_lang_embed
         if use_precomp_lang_embed:
             self.empty_lang_embed = torch.load("data/empty_lang_embed.pt")

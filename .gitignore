@@ -190,3 +190,9 @@ pretrain-deepspeed.sh
 todo.md
 data/aloha/download.py
 data/aloha/seehdf5.py
+
+models/sam2
+
+models
+finetune170m.sh
+configs/base170m.yaml

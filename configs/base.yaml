@@ -52,6 +52,10 @@ model:
     # 1B: num_head 32 hidden_size 2048
     hidden_size: 2048
     depth: 28
+    # # distinct_depth: 14 # save for later use
+    # # conditions: [img, lang, point, box, mask] # save for later use
+    # points_size: 64
+    # points_shape: [4, 2]
     num_heads: 32
     cond_pos_embed_type: multimodal 
   # For noise scheduler

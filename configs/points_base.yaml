@@ -1,0 +1,4 @@
+model:
+  rdt:
+    points_size: 64
+    points_shape: [4, 2]

@@ -19,6 +19,12 @@ def parse_args(input_args=None):
         help="Path to the configuration file. Default is `configs/base.yaml`.",
     )
     parser.add_argument(
+        "--points_config_path",
+        type=str,
+        default="configs/points_base.yaml",
+        help="Path to the configuration file. Default is `configs/points_base.yaml`.",
+    )
+    parser.add_argument(
         "--deepspeed",
         type=str,
         default=None,

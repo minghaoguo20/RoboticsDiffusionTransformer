@@ -39,6 +39,7 @@ from models.rdt_runner import RDTRunner
 from train.dataset import DataCollatorForVLAConsumerDataset, VLAConsumerDataset
 from train.sample import log_sample_res
 
+import torch.nn as nn
 
 if is_wandb_available():
     import wandb
@@ -76,6 +77,8 @@ def train(args, logger):
     # Read the config
     with open(args.config_path, "r") as fp:
         config = yaml.safe_load(fp)
+    with open(args.points_config_path, "r") as fp:
+        points_config = yaml.safe_load(fp)
 
     logging_dir = Path(args.output_dir, args.logging_dir)
 
@@ -141,41 +144,97 @@ def train(args, logger):
     vision_encoder = SiglipVisionTower(vision_tower=args.pretrained_vision_encoder_name_or_path, args=None)
     image_processor = vision_encoder.image_processor
 
+    def load_pretrained_weights(rdt, pretrained_path):
+        pretrained_weights = torch.load(os.path.join(pretrained_path, "pytorch_model.bin"), map_location="cpu")
+        model_state_dict = rdt.state_dict()
+
+        updated_state_dict = {}
+        for name, param in model_state_dict.items():
+            if name in pretrained_weights:
+                updated_state_dict[name] = pretrained_weights[name]
+                param.requires_grad = False 
+                print(f"Loaded and froze pretrained weight for: {name}")
+            else:
+                if param.requires_grad:
+                    if param.dim() > 1:
+                        nn.init.xavier_uniform_(param)
+                    else:
+                        nn.init.normal_(param, mean=0.0, std=0.01)
+                updated_state_dict[name] = param 
+                print(f"Randomly initialized weight for: {name}")
+
+        rdt.load_state_dict(updated_state_dict, strict=False)
+
+        for name, param in rdt.named_parameters():
+            if name in pretrained_weights:
+                param.requires_grad = False
+
     # Load from a pretrained checkpoint
+    img_cond_len = (config["common"]["img_history_size"] * config["common"]["num_cameras"] * vision_encoder.num_patches)
+    rdt = RDTRunner(
+        action_dim=config["common"]["state_dim"],
+        pred_horizon=config["common"]["action_chunk_size"],
+        config=config["model"],
+        lang_token_dim=config["model"]["lang_token_dim"],
+        img_token_dim=config["model"]["img_token_dim"],
+        state_token_dim=config["model"]["state_token_dim"],
+        max_lang_cond_len=config["dataset"]["tokenizer_max_length"],
+        img_cond_len=img_cond_len,
+        img_pos_embed_config=[
+            ("image", (config["common"]["img_history_size"], 
+                config["common"]["num_cameras"], 
+                -vision_encoder.num_patches)),  
+        ],
+        lang_pos_embed_config=[
+            ("lang", -config["dataset"]["tokenizer_max_length"]),
+        ],
+        dtype=weight_dtype,
+        points_config=points_config,
+        pred_points=True,
+    )
     if (
         args.pretrained_model_name_or_path is not None
         and not os.path.isfile(args.pretrained_model_name_or_path)
     ):
-        logger.info("Constructing model from pretrained checkpoint.")
-        rdt = RDTRunner.from_pretrained(args.pretrained_model_name_or_path)
+        logger.info("Constructing model from pretrained checkpoint with fine-grained weight initialization.")
+        load_pretrained_weights(rdt, args.pretrained_model_name_or_path)
     else:
-        logger.info("Constructing model from provided config.")
-        # Calculate the image condition length
-        img_cond_len = (config["common"]["img_history_size"] 
-                        * config["common"]["num_cameras"] 
-                        * vision_encoder.num_patches)
-        rdt = RDTRunner(
-            action_dim=config["common"]["state_dim"],
-            pred_horizon=config["common"]["action_chunk_size"],
-            config=config["model"],
-            lang_token_dim=config["model"]["lang_token_dim"],
-            img_token_dim=config["model"]["img_token_dim"],
-            state_token_dim=config["model"]["state_token_dim"],
-            max_lang_cond_len=config["dataset"]["tokenizer_max_length"],
-            img_cond_len=img_cond_len,
-            img_pos_embed_config=[
-                # No initial pos embed in the last grid size
-                # since we've already done in ViT
-                ("image", (config["common"]["img_history_size"], 
-                    config["common"]["num_cameras"], 
-                    -vision_encoder.num_patches)),  
-            ],
-            lang_pos_embed_config=[
-                # Similarly, no initial pos embed for language
-                ("lang", -config["dataset"]["tokenizer_max_length"]),
-            ],
-            dtype=weight_dtype,
-        )
+        logger.info("Constructing model from provided config without pretrained weights.")
+
+    # if (
+    #     args.pretrained_model_name_or_path is not None
+    #     and not os.path.isfile(args.pretrained_model_name_or_path)
+    # ):
+    #     logger.info("Constructing model from pretrained checkpoint.")
+    #     rdt = RDTRunner.from_pretrained(args.pretrained_model_name_or_path)
+    # else:
+    #     logger.info("Constructing model from provided config.")
+    #     # Calculate the image condition length
+    #     img_cond_len = (config["common"]["img_history_size"] 
+    #                     * config["common"]["num_cameras"] 
+    #                     * vision_encoder.num_patches)
+    #     rdt = RDTRunner(
+    #         action_dim=config["common"]["state_dim"],
+    #         pred_horizon=config["common"]["action_chunk_size"],
+    #         config=config["model"],
+    #         lang_token_dim=config["model"]["lang_token_dim"],
+    #         img_token_dim=config["model"]["img_token_dim"],
+    #         state_token_dim=config["model"]["state_token_dim"],
+    #         max_lang_cond_len=config["dataset"]["tokenizer_max_length"],
+    #         img_cond_len=img_cond_len,
+    #         img_pos_embed_config=[
+    #             # No initial pos embed in the last grid size
+    #             # since we've already done in ViT
+    #             ("image", (config["common"]["img_history_size"], 
+    #                 config["common"]["num_cameras"], 
+    #                 -vision_encoder.num_patches)),  
+    #         ],
+    #         lang_pos_embed_config=[
+    #             # Similarly, no initial pos embed for language
+    #             ("lang", -config["dataset"]["tokenizer_max_length"]),
+    #         ],
+    #         dtype=weight_dtype,
+    #     )
         
                                                                        
     ema_rdt = copy.deepcopy(rdt)
@@ -250,6 +309,7 @@ def train(args, logger):
         state_noise_snr=args.state_noise_snr,
         use_hdf5=args.load_from_hdf5,
         use_precomp_lang_embed=args.precomp_lang_embed,
+        # max_files=400,
     )
     sample_dataset = VLAConsumerDataset(
         config=config["dataset"],
@@ -264,6 +324,7 @@ def train(args, logger):
         state_noise_snr=None,
         use_hdf5=args.load_from_hdf5,
         use_precomp_lang_embed=args.precomp_lang_embed,
+        # max_files=100,
     )                              
     
     data_collator = DataCollatorForVLAConsumerDataset(tokenizer)                                                        
@@ -402,6 +463,9 @@ def train(args, logger):
         # Forward and backward...
         for batch in train_dataloader:
             with accelerator.accumulate(rdt):
+                # temperately hard code, in the furture, use data from dataloader
+                batch['points'] = torch.zeros(batch["states"].shape[0], 64, 4, 2)
+                points = batch['points'].to(dtype=weight_dtype)
                 images = batch["images"].to(dtype=weight_dtype)
                 states = batch["states"].to(dtype=weight_dtype) # (B, T, D_a)
                 # We only use the last state as input
@@ -431,7 +495,8 @@ def train(args, logger):
                     state_tokens=states,
                     action_gt=actions,
                     action_mask=state_elem_mask,
-                    ctrl_freqs=ctrl_freqs
+                    ctrl_freqs=ctrl_freqs,
+                    points_gt=points
                 )
 
                 accelerator.backward(loss)

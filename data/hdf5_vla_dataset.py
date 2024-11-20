@@ -15,7 +15,7 @@ class HDF5VLADataset:
     This class is used to sample episodes from the embododiment dataset
     stored in HDF5.
     """
-    def __init__(self) -> None:
+    def __init__(self, max_files=None) -> None:
         # [Modify] The path to the HDF5 dataset directory
         # Each HDF5 file contains one episode
         HDF5_DIR = "data/datasets/agilex/rdt_data/"
@@ -26,6 +26,10 @@ class HDF5VLADataset:
             for filename in fnmatch.filter(files, '*.hdf5'):
                 file_path = os.path.join(root, filename)
                 self.file_paths.append(file_path)
+
+        # If max_files is provided, use only that many files
+        if max_files is not None:
+            self.file_paths = self.file_paths[:max_files]
                 
         # Load the config
         with open('configs/base.yaml', 'r') as file:
