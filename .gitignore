@@ -196,3 +196,4 @@ models/sam2
 models
 finetune170m.sh
 configs/base170m.yaml
+robotics-diffusion-transformer
