@@ -2,13 +2,12 @@ import os
 import logging
 import json
 import yaml
+import random
 
 import numpy as np
 import cv2
 
 from torch.utils.data import Dataset
-
-logging.basicConfig(level=logging.INFO,format='%(asctime)s - %(levelname)s - %(message)s')
 
 class AffordVLADataset(Dataset):
     def __init__(self,split='train'):
@@ -47,9 +46,14 @@ class AffordVLADataset(Dataset):
 
     def history_image(self):
         pass
-
-    def __getitem__(self, idx):
-        if idx > self.data_num:
+    
+    def get_item(self, index: int=None, state_only=False):
+        return self.__getitem__(index)
+    
+    def __getitem__(self, idx: int=None):
+        if idx is None:
+            idx = random.randint(0, self.data_num)
+        elif idx > self.data_num:
             raise ValueError(f"idx must be less than n_data={self.data_num}, but idx = {idx}")
 
         instruction = self.metadata[idx]['action'] + ' ' + self.metadata[idx]['object']
@@ -95,7 +99,8 @@ class AffordVLADataset(Dataset):
         # 适配RDT数据格式
         cam_high_mask = np.array([True] * self.IMG_HISORY_SIZE)
 
-        state = np.zeros(self.STATE_DIM)
+        state = np.zeros((self.CHUNK_SIZE,self.STATE_DIM))
+        state_indicator = np.zeros(self.STATE_DIM)
         actions = np.zeros((self.CHUNK_SIZE, self.STATE_DIM)) 
 
         cam_left_wrist = np.zeros_like(images)
@@ -119,6 +124,7 @@ class AffordVLADataset(Dataset):
             "state_mean": state,
             "state_norm": state,
             "actions": actions,
+            "state_indicator": state_indicator,
             "cam_left_wrist": cam_left_wrist,
             "cam_left_wrist_mask": cam_left_wrist_mask,
             "cam_right_wrist": cam_right_wrist,
@@ -138,6 +144,9 @@ class AffordVLADataset(Dataset):
 # for test the dataset
 def test_dataset():
     from torch.utils.data import DataLoader
+    import logging
+
+    logging.basicConfig(level=logging.INFO,format='%(asctime)s - %(levelname)s - %(message)s')
     
     # 初始化数据集
     dataset = AffordVLADataset(split='train')
