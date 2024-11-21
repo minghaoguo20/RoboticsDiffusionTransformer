@@ -52,7 +52,7 @@ class AffordVLADataset(Dataset):
     
     def __getitem__(self, idx: int=None):
         if idx is None:
-            idx = random.randint(0, self.data_num)
+            idx = random.randint(0, self.data_num-1)
         elif idx > self.data_num:
             raise ValueError(f"idx must be less than n_data={self.data_num}, but idx = {idx}")
 
