@@ -73,8 +73,8 @@ class AffordVLADataset(Dataset):
         center_points_2d =  np.full((64, 4, 2), np.nan)
         max_offset_points_2d =  np.full((64, 4, 2), np.nan)
 
-        center_points_2d[1,:,:] =  dtraj2d
-        max_offset_points_2d[1,:,:] = dtraj2d_maxoffset
+        center_points_2d[0,:,:] =  dtraj2d
+        max_offset_points_2d[0,:,:] = dtraj2d_maxoffset
         
         imgs = []
         for img_i in range(max(img_idx - self.IMG_HISORY_SIZE+1, 0), img_idx+1):
